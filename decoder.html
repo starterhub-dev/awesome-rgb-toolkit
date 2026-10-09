@@ -204,7 +204,7 @@ footer{padding:18px 0 0;color:var(--muted);font-size:12px}
       format = '账号卡密';
     } else if (parts.length >= 6 && parts.filter(part => datePattern.test(part)).length === 1) {
       const dateIndex = parts.findIndex(part => datePattern.test(part));
-      const accountIndex = parts.findIndex(part => /[^\\s@]+@[^\\s@]+\\.[^\\s@]+/u.test(part));
+      const accountIndex = parts.findIndex(part => /[^\s@]+@[^\s@]+\.[^\s@]+/u.test(part));
       if (accountIndex < 0 || accountIndex === dateIndex || parts.length !== 6) {
         output.textContent = '';
         inputStatus.textContent = '检测到类似 Apple ID 卡密，但无法唯一识别账号、生日或字段数量。请调整为六个独立字段后重试。';
