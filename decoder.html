@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0d0d12">
+<meta name="description" content="在浏览器本地拆分和整理空格分隔的文本字段。">
+<title>文本解码器 · RGB Toolkit</title>
+<style>
+:root{color-scheme:dark;--bg:#0d0d12;--surface:#16161e;--surface2:#1e1e2a;--border:rgba(255,255,255,.1);--ink:#f0f0f5;--muted:#9292a8;--red:#ff2458;--green:#00ff9d;--blue:#4b9bff}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at 18% 18%,rgba(255,0,64,.13),transparent 34%),radial-gradient(circle at 86% 76%,rgba(0,255,136,.08),transparent 36%);z-index:-1}
+main{width:min(900px,100%);margin:0 auto;padding:24px 18px 48px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:6px 0 22px;border-bottom:1px solid var(--border)}
+.brand{font-weight:850;letter-spacing:.03em;font-size:18px;background:linear-gradient(90deg,var(--red),var(--green),var(--blue));-webkit-background-clip:text;background-clip:text;color:transparent}
+a{color:var(--green);text-decoration:none}a:hover{text-decoration:underline}
+.back{font-size:14px;color:var(--muted);border:1px solid var(--border);padding:8px 12px;border-radius:9px}
+.hero{padding:34px 0 24px}.eyebrow{font:700 12px/1.4 ui-monospace,monospace;letter-spacing:.16em;color:var(--green);text-transform:uppercase}
+h1{font-size:clamp(30px,7vw,48px);line-height:1.12;margin:10px 0;letter-spacing:-.04em}
+.subtitle{max-width:660px;color:var(--muted);margin:0}
+.card{background:rgba(22,22,30,.93);border:1px solid var(--border);border-radius:18px;padding:clamp(16px,4vw,26px);margin:16px 0;box-shadow:0 16px 60px rgba(0,0,0,.12)}
+label{display:block;font-weight:700;margin-bottom:9px}
+.hint{font-size:13px;color:var(--muted);margin:8px 0 0}
+textarea{display:block;width:100%;min-height:170px;resize:vertical;border:1px solid var(--border);border-radius:12px;padding:14px;background:#0b0b10;color:var(--ink);font:14px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace;outline:none}
+textarea:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(0,255,157,.08)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+button{appearance:none;border:1px solid var(--border);border-radius:10px;background:var(--surface2);color:var(--ink);padding:10px 15px;font-weight:700;cursor:pointer}
+button:hover{border-color:var(--green)}
+button.primary{background:linear-gradient(120deg,var(--red),#8c39ff);border:0;color:white}
+button:focus-visible,a:focus-visible{outline:2px solid var(--green);outline-offset:3px}
+.result{white-space:pre-wrap;overflow-wrap:anywhere;min-height:116px;padding:14px;border-radius:12px;background:#0b0b10;border:1px solid var(--border);font:14px/1.8 ui-monospace,SFMono-Regular,Consolas,monospace}
+.status{min-height:22px;margin-top:8px;color:var(--green);font-size:13px}
+.rules{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+.rule{padding:12px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.02)}
+.rule strong{display:block;color:var(--green);font-size:13px;margin-bottom:3px}
+.rule span{font-size:13px;color:var(--muted)}
+footer{padding:18px 0 0;color:var(--muted);font-size:12px}
+@media(max-width:560px){.top{align-items:flex-start}.rules{grid-template-columns:1fr}.hero{padding-top:28px}.card{border-radius:14px}}
+</style>
+</head>
+<body>
+<main>
+  <nav class="top" aria-label="主导航">
+    <div class="brand">AWESOME RGB TOOLKIT</div>
+    <a class="back" href="./">← 返回工具箱</a>
+  </nav>
+  <header class="hero">
+    <div class="eyebrow">LOCAL · PRIVATE · INSTANT</div>
+    <h1>文本解码器<span style="color:var(--green)">.</span></h1>
+    <p class="subtitle">把一串按空格分隔的字段整理成清晰结构。所有解析都在当前浏览器完成，不会通过本页面上传输入内容。</p>
+  </header>
+
+  <section class="card">
+    <label for="source">原始文本</label>
+    <textarea id="source" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="粘贴需要整理的文本…&#10;例如：字段一 字段二 字段三 字段四"></textarea>
+    <p class="hint">按空格、换行或制表符拆分；连续分隔符会自动忽略。请先确认输入格式符合下方规则。</p>
+    <div class="rules">
+      <div class="rule"><strong>字段 01</strong><span>账号 / 第一段</span></div>
+      <div class="rule"><strong>字段 02</strong><span>密码 / 第二段</span></div>
+      <div class="rule"><strong>字段 03+</strong><span>2FA / 其余字段合并</span></div>
+    </div>
+    <div class="actions">
+      <button class="primary" id="decode" type="button">解码并整理</button>
+      <button id="clear" type="button">清空内容</button>
+    </div>
+    <div class="status" id="inputStatus" role="status" aria-live="polite"></div>
+  </section>
+
+  <section class="card">
+    <label for="output">整理结果</label>
+    <div class="result" id="output">结果将在这里显示。</div>
+    <div class="actions"><button class="primary" id="copy" type="button">复制结果</button></div>
+    <div class="status" id="copyStatus" role="status" aria-live="polite"></div>
+  </section>
+
+  <section class="card">
+    <strong>隐私提示</strong>
+    <p class="hint">此页面只在浏览器本地处理文本，不含 API 请求、远程提交或自动保存逻辑。仍请谨慎处理真实密码、验证码种子或其他敏感信息，勿在公共设备上使用。</p>
+  </section>
+  <footer>AWESOME RGB TOOLKIT · Decoder v0.1</footer>
+</main>
+<script>
+(() => {
+  const source = document.getElementById('source');
+  const output = document.getElementById('output');
+  const inputStatus = document.getElementById('inputStatus');
+  const copyStatus = document.getElementById('copyStatus');
+  let decodedText = '';
+
+  function decode() {
+    const raw = source.value.trim();
+    copyStatus.textContent = '';
+    if (!raw) {
+      decodedText = '';
+      output.textContent = '结果将在这里显示。';
+      inputStatus.textContent = '请先粘贴需要整理的文本。';
+      return;
+    }
+    const parts = raw.split(/\s+/u).filter(Boolean);
+    if (parts.length < 3) {
+      decodedText = '';
+      output.textContent = '';
+      inputStatus.textContent = '字段不足：至少需要 3 段，分别对应账号、密码和 2FA。';
+      return;
+    }
+    decodedText = '账号：' + parts[0] + '\n密码：' + parts[1] + '\n2FA：' + parts.slice(2).join(' ');
+    output.textContent = decodedText;
+    inputStatus.textContent = '整理完成 · 共识别 ' + parts.length + ' 段字段。';
+  }
+
+  document.getElementById('decode').addEventListener('click', decode);
+  document.getElementById('clear').addEventListener('click', () => {
+    source.value = '';
+    decodedText = '';
+    output.textContent = '结果将在这里显示。';
+    inputStatus.textContent = '';
+    copyStatus.textContent = '';
+    source.focus();
+  });
+  document.getElementById('copy').addEventListener('click', async () => {
+    if (!decodedText) {
+      copyStatus.textContent = '还没有可复制的整理结果。';
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(decodedText);
+      copyStatus.textContent = '已复制到剪贴板。';
+    } catch {
+      const range = document.createRange();
+      range.selectNodeContents(output);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      copyStatus.textContent = '浏览器未允许自动复制，请长按选中结果后复制。';
+    }
+  });
+})();
+</script>
+</body>
+</html>
