@@ -110,6 +110,10 @@ footer{padding:18px 0 0;color:var(--muted);font-size:12px}
       valueLabel.textContent = '字段值：' + value;
       const select = document.createElement('select');
       select.style.cssText = 'width:100%;padding:10px;border-radius:9px;background:var(--surface2);color:var(--ink);border:1px solid var(--border)';
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = '选择标签';
+      select.appendChild(placeholder);
       appleRoles.forEach(role => {
         const option = document.createElement('option');
         option.value = role;
@@ -117,8 +121,7 @@ footer{padding:18px 0 0;color:var(--muted);font-size:12px}
         select.appendChild(option);
       });
       // Initial guess only; user confirms or changes each opaque field mapping.
-      const defaultRole = index === 0 ? '账号' : index === 1 ? '密码' : '';
-      if (defaultRole && appleRoles.includes(defaultRole)) select.value = defaultRole;
+      select.value = '';
       pendingAppleFields.selections.push({ index, select });
       row.append(valueLabel, select);
       rows.appendChild(row);
@@ -130,8 +133,12 @@ footer{padding:18px 0 0;color:var(--muted);font-size:12px}
     if (!pendingAppleFields) return;
     const { parts, accountIndex, dateIndex, selections } = pendingAppleFields;
     const assigned = new Map();
-    selections.forEach(({ index, select }) => {
+    for (const { index, select } of selections) {
       const role = select.value;
+      if (!role) {
+        inputStatus.textContent = '请为每个中间字段选择标签后再应用。';
+        return;
+      }
       if (role !== '其他字段') {
         if (assigned.has(role)) {
           inputStatus.textContent = '字段映射有重复标签：“' + role + '”。请为每个字段选择不同标签。';
@@ -139,7 +146,7 @@ footer{padding:18px 0 0;color:var(--muted);font-size:12px}
         }
         assigned.set(role, parts[index]);
       }
-    });
+    }
     const required = ['密码', '朋友', '工作', '父母'];
     const missing = required.filter(role => !assigned.has(role));
     if (missing.length) {
