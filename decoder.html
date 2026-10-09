@@ -60,12 +60,6 @@ footer{padding:18px 0 0;color:var(--muted);font-size:12px}
       <div class="rule"><strong>Apple ID</strong><span>账号、密码、朋友、工作、父母、生日</span></div>
       <div class="rule"><strong>安全优先</strong><span>不确定格式时提示确认</span></div>
     </div>
-    <section id="mappingPanel" class="card" hidden style="margin-top:18px">
-      <strong>Apple ID 字段映射</strong>
-      <p class="hint">账号和生日会尝试自动识别。其余字段值没有固定语义，请在下方为每个值选择对应标签，再生成结果。</p>
-      <div id="mappingRows"></div>
-      <div class="actions"><button class="primary" id="applyMapping" type="button">应用字段映射</button></div>
-    </section>
     <div class="actions">
       <button class="primary" id="decode" type="button">解码并整理</button>
       <button id="clear" type="button">清空内容</button>
@@ -84,7 +78,7 @@ footer{padding:18px 0 0;color:var(--muted);font-size:12px}
     <strong>隐私提示</strong>
     <p class="hint">此页面只在浏览器本地处理文本，不含 API 请求、远程提交或自动保存逻辑。仍请谨慎处理真实密码、验证码种子或其他敏感信息，勿在公共设备上使用。</p>
   </section>
-  <footer>AWESOME RGB TOOLKIT · Decoder v0.3</footer>
+  <footer>AWESOME RGB TOOLKIT · Decoder v0.2</footer>
 </main>
 <script>
 (() => {
@@ -92,140 +86,77 @@ footer{padding:18px 0 0;color:var(--muted);font-size:12px}
   const output = document.getElementById('output');
   const inputStatus = document.getElementById('inputStatus');
   const copyStatus = document.getElementById('copyStatus');
-  const panel = document.getElementById('mappingPanel');
-  const rows = document.getElementById('mappingRows');
   let decodedText = '';
-  let pending = null;
-  const roles = ['密码', '朋友', '工作', '父母', '其他字段'];
-
-  function showMapping(parts, accountIndex, dateIndex) {
-    rows.textContent = '';
-    pending = { parts, accountIndex, dateIndex, selections: [] };
-    parts.forEach((value, index) => {
-      if (index === accountIndex || index === dateIndex) return;
-      const row = document.createElement('div');
-      row.style.cssText = 'display:grid;grid-template-columns:minmax(0,1fr) minmax(120px,.8fr);gap:12px;align-items:center;margin-top:10px';
-      const label = document.createElement('label');
-      label.style.margin = '0';
-      label.textContent = '字段值：' + value;
-      const select = document.createElement('select');
-      select.style.cssText = 'width:100%;padding:10px;border-radius:9px;background:var(--surface2);color:var(--ink);border:1px solid var(--border)';
-      const blank = document.createElement('option');
-      blank.value = '';
-      blank.textContent = '选择标签';
-      select.appendChild(blank);
-      roles.forEach(role => {
-        const option = document.createElement('option');
-        option.value = role;
-        option.textContent = role;
-        select.appendChild(option);
-      });
-      pending.selections.push({ index, select });
-      row.append(label, select);
-      rows.appendChild(row);
-    });
-    panel.hidden = false;
-  }
-
-  function applyMapping() {
-    if (!pending) return;
-    const assigned = new Map();
-    for (const item of pending.selections) {
-      const role = item.select.value;
-      if (!role) {
-        inputStatus.textContent = '请为每个字段选择标签后再应用。';
-        return;
-      }
-      if (role !== '其他字段') {
-        if (assigned.has(role)) {
-          inputStatus.textContent = '标签重复：' + role + '。请为每个字段选择不同标签。';
-          return;
-        }
-        assigned.set(role, pending.parts[item.index]);
-      }
-    }
-    const missing = ['密码', '朋友', '工作', '父母'].filter(role => !assigned.has(role));
-    if (missing.length) {
-      inputStatus.textContent = '尚未指定：' + missing.join('、') + '。';
-      return;
-    }
-    decodedText = [
-      '账号：' + pending.parts[pending.accountIndex],
-      '密码：' + assigned.get('密码'),
-      '朋友：' + assigned.get('朋友'),
-      '工作：' + assigned.get('工作'),
-      '父母：' + assigned.get('父母'),
-      '生日：' + pending.parts[pending.dateIndex]
-    ].join('\n');
-    output.textContent = decodedText;
-    inputStatus.textContent = '字段映射已应用，请核对结果后再复制。';
-  }
 
   function decode() {
     const raw = source.value.trim();
     copyStatus.textContent = '';
     decodedText = '';
-    panel.hidden = true;
-    pending = null;
     if (!raw) {
       output.textContent = '结果将在这里显示。';
       inputStatus.textContent = '请先粘贴需要整理的文本。';
       return;
     }
 
-    const labelled = labels => raw.match(new RegExp('^\\s*(?:' + labels + ')\\s*[:：]\\s*(.+?)\\s*$', 'imu'));
+    const labelled = (labels) => {
+      const pattern = new RegExp('^\\s*(?:' + labels + ')\\s*[:：]\\s*(.+?)\\s*$', 'imu');
+      return raw.match(pattern);
+    };
     const accountMatch = labelled('账号|帐号|用户名|账户|Apple\\s*ID');
     const passwordMatch = labelled('密码|口令');
     const secretMatch = labelled('2FA(?:代码|密钥|验证码)?|二步验证(?:密钥|代码)?|验证器密钥');
-    const datePattern = /^\\d{4}[/-]\\d{1,2}[/-]\\d{1,2}$/u;
-    const parts = raw.split(/\\s+/u).filter(Boolean);
+    const datePattern = /^\d{4}[/-]\d{1,2}[/-]\d{1,2}$/u;
+    const parts = raw.split(/\s+/u).filter(Boolean);
+    let lines = [];
+    let format = '';
 
     if (accountMatch || passwordMatch || secretMatch) {
       const account = accountMatch?.[1].trim() || '';
       const password = passwordMatch?.[1].trim() || '';
-      const secret = secretMatch?.[1].replace(/\\s+/gu, '').trim() || '';
+      const secret = secretMatch?.[1].replace(/\s+/gu, '').trim() || '';
       const missing = [];
       if (!account) missing.push('账号');
       if (!password) missing.push('密码');
       if (!secret) missing.push('2FA 密钥');
       if (missing.length) {
         output.textContent = '';
-        inputStatus.textContent = '检测到带标签格式，但缺少：' + missing.join('、') + '。';
+        inputStatus.textContent = '检测到带标签格式，但缺少：' + missing.join('、') + '。请检查输入，或使用 Apple ID 卡密格式。';
         return;
       }
-      decodedText = ['账号：' + account, '密码：' + password, '2FA 密钥：' + secret].join('\n');
-      output.textContent = decodedText;
-      inputStatus.textContent = '整理完成 · 已识别为账号卡密。请核对后复制。';
+      lines = ['账号：' + account, '密码：' + password, '2FA 密钥：' + secret];
+      format = '账号卡密';
+    } else if (parts.length >= 6 && datePattern.test(parts[parts.length - 1])) {
+      // Apple ID compact card: account, password, friend, work, parent, birth date.
+      const [account, password, friend, work, parent, ...tail] = parts;
+      const birthday = tail.join(' ');
+      lines = [
+        '账号：' + account,
+        '密码：' + password,
+        '朋友：' + friend,
+        '工作：' + work,
+        '父母：' + parent,
+        '生日：' + birthday
+      ];
+      format = 'Apple ID 卡密';
+    } else if (parts.length === 3) {
+      // Only the unambiguous three-field compact form is treated as account/password/2FA.
+      lines = ['账号：' + parts[0], '密码：' + parts[1], '2FA 密钥：' + parts[2].replace(/\s+/gu, '')];
+      format = '三字段账号卡密';
+    } else {
+      output.textContent = '';
+      inputStatus.textContent = '暂时无法可靠判断格式。请粘贴带“账号/密码/2FA 密钥”等标签的文本，或确认 Apple ID 卡密是否为“账号 密码 朋友 工作 父母 生日”六字段格式。';
       return;
     }
 
-    const dateIndexes = parts.map((part, index) => datePattern.test(part) ? index : -1).filter(index => index >= 0);
-    const accountIndex = parts.findIndex(part => /[^\\s@]+@[^\\s@]+\\.[^\\s@]+/u.test(part));
-    if (dateIndexes.length === 1 && parts.length === 6 && accountIndex >= 0 && accountIndex !== dateIndexes[0]) {
-      showMapping(parts, accountIndex, dateIndexes[0]);
-      output.textContent = '请在上方字段映射区域选择对应标签。';
-      inputStatus.textContent = '已识别邮箱和生日。请确认其余字段含义。';
-      return;
-    }
-
-    if (parts.length === 3) {
-      decodedText = ['账号：' + parts[0], '密码：' + parts[1], '2FA 密钥：' + parts[2]].join('\n');
-      output.textContent = decodedText;
-      inputStatus.textContent = '整理完成 · 已识别为三字段账号卡密。';
-      return;
-    }
-
-    output.textContent = '';
-    inputStatus.textContent = '无法可靠识别格式。请检查字段，或使用带标签的文本。';
+    decodedText = lines.join('\n');
+    output.textContent = decodedText;
+    inputStatus.textContent = '整理完成 · 已识别为 ' + format + '。请核对字段后再复制。';
   }
 
   document.getElementById('decode').addEventListener('click', decode);
-  document.getElementById('applyMapping').addEventListener('click', applyMapping);
   document.getElementById('clear').addEventListener('click', () => {
     source.value = '';
     decodedText = '';
-    pending = null;
-    panel.hidden = true;
     output.textContent = '结果将在这里显示。';
     inputStatus.textContent = '';
     copyStatus.textContent = '';
@@ -240,6 +171,11 @@ footer{padding:18px 0 0;color:var(--muted);font-size:12px}
       await navigator.clipboard.writeText(decodedText);
       copyStatus.textContent = '已复制到剪贴板。';
     } catch {
+      const range = document.createRange();
+      range.selectNodeContents(output);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
       copyStatus.textContent = '浏览器未允许自动复制，请长按选中结果后复制。';
     }
   });
