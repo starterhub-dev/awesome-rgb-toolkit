@@ -160,7 +160,7 @@ footer{padding:18px 0 0;color:var(--muted);font-size:12px}
       '工作：' + assigned.get('工作'),
       '父母：' + assigned.get('父母'),
       '生日：' + parts[dateIndex]
-    ].join('\\n');
+    ].join('\n');
     output.textContent = decodedText;
     inputStatus.textContent = '字段映射已应用。请核对结果后再复制。';
   }
@@ -230,9 +230,11 @@ footer{padding:18px 0 0;color:var(--muted);font-size:12px}
     inputStatus.textContent = '整理完成 · 已识别为 ' + format + '。请核对字段后再复制。';
   }
 
-  document.getElementById('decode').addEventListener('click', decode);\n  document.getElementById('applyMapping').addEventListener('click', applyAppleMapping);
+  document.getElementById('decode').addEventListener('click', decode);
+  document.getElementById('applyMapping').addEventListener('click', applyAppleMapping);
   document.getElementById('clear').addEventListener('click', () => {
-    source.value = '';\n    pendingAppleFields = null;\n    document.getElementById('mappingPanel').hidden = true;
+    source.value = '';
+    pendingAppleFields = null;\n    document.getElementById('mappingPanel').hidden = true;
     decodedText = '';
     output.textContent = '结果将在这里显示。';
     inputStatus.textContent = '';
