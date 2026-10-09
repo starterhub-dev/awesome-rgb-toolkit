@@ -31,6 +31,14 @@ button.primary{background:linear-gradient(120deg,var(--red),#8c39ff);border:0;co
 button:focus-visible,a:focus-visible{outline:2px solid var(--green);outline-offset:3px}
 .result{white-space:pre-wrap;overflow-wrap:anywhere;min-height:116px;padding:14px;border-radius:12px;background:#0b0b10;border:1px solid var(--border);font:14px/1.8 ui-monospace,SFMono-Regular,Consolas,monospace}
 .status{min-height:22px;margin-top:8px;color:var(--green);font-size:13px}
+.promo{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 18px;margin:16px 0;border:1px solid rgba(124,112,255,.28);border-radius:14px;background:linear-gradient(110deg,rgba(124,112,255,.10),rgba(75,155,255,.06))}
+.promo-copy{min-width:0}
+.promo-kicker{display:block;margin-bottom:3px;color:#aaa1ff;font-size:10px;font-weight:800;letter-spacing:.13em}
+.promo-title{margin:0;color:var(--ink);font-size:15px;font-weight:800;line-height:1.4}
+.promo-desc{margin:3px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
+.promo-link{flex-shrink:0;display:inline-flex;align-items:center;gap:6px;padding:8px 11px;border:1px solid rgba(170,161,255,.32);border-radius:9px;background:rgba(124,112,255,.13);color:#c4bdff;font-size:12px;font-weight:750;white-space:nowrap}
+.promo-link:hover{background:rgba(124,112,255,.22);text-decoration:none}
+@media(max-width:560px){.promo{align-items:flex-start;padding:13px;gap:10px}.promo-desc{max-width:240px}.promo-link{font-size:11px;padding:8px 9px}}
 .rules{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
 .rule{padding:12px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.02)}
 .rule strong{display:block;color:var(--green);font-size:13px;margin-bottom:3px}
@@ -73,6 +81,15 @@ footer{padding:18px 0 0;color:var(--muted);font-size:12px}
     <div class="actions"><button class="primary" id="copy" type="button">复制结果</button></div>
     <div class="status" id="copyStatus" role="status" aria-live="polite"></div>
   </section>
+
+  <aside class="promo" aria-label="AI 新手导航推荐">
+    <div class="promo-copy">
+      <span class="promo-kicker">DISCOVER AI TOOLS</span>
+      <p class="promo-title">想发现更多 AI 工具？</p>
+      <p class="promo-desc">AI 新手导航 · 按用途查找工具、官方入口与入门教程。</p>
+    </div>
+    <a class="promo-link" href="https://starterhub-dev.github.io/ai-tools/" target="_blank" rel="noopener noreferrer" aria-label="打开 AI 新手导航">探索 AI 工具 ↗</a>
+  </aside>
 
   <section class="card">
     <strong>隐私提示</strong>
