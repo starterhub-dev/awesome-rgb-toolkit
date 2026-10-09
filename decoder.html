@@ -97,16 +97,47 @@ footer{padding:18px 0 0;color:var(--muted);font-size:12px}
       inputStatus.textContent = '请先粘贴需要整理的文本。';
       return;
     }
-    const parts = raw.split(/\s+/u).filter(Boolean);
-    if (parts.length < 3) {
-      decodedText = '';
-      output.textContent = '';
-      inputStatus.textContent = '字段不足：至少需要 3 段，分别对应账号、密码和 2FA。';
-      return;
+
+    // Prefer labelled cards and ignore explanatory paragraphs/URLs after the 2FA line.
+    const accountMatch = raw.match(/^\s*(?:账号|帐号|用户名|账户)\s*[:：]\s*(.+?)\s*$/imu);
+    const passwordMatch = raw.match(/^\s*(?:密码|口令)\s*[:：]\s*(.+?)\s*$/imu);
+    const twoFAMatch = raw.match(/^\s*(?:2FA(?:代码|密钥|验证码)?|二步验证(?:密钥|代码)?|验证器密钥)\s*[:：]\s*(.+?)\s*$/imu);
+
+    let account = '';
+    let password = '';
+    let secret = '';
+
+    if (accountMatch || passwordMatch || twoFAMatch) {
+      account = accountMatch ? accountMatch[1].trim() : '';
+      password = passwordMatch ? passwordMatch[1].trim() : '';
+      secret = twoFAMatch ? twoFAMatch[1].replace(/\s+/gu, '').trim() : '';
+      const missing = [];
+      if (!account) missing.push('账号');
+      if (!password) missing.push('密码');
+      if (!secret) missing.push('2FA 密钥');
+      if (missing.length) {
+        decodedText = '';
+        output.textContent = '';
+        inputStatus.textContent = '未识别到：' + missing.join('、') + '。请检查字段标签和冒号。';
+        return;
+      }
+    } else {
+      // Compact format fallback: account, password, then 2FA secret.
+      const parts = raw.split(/\s+/u).filter(Boolean);
+      if (parts.length < 3) {
+        decodedText = '';
+        output.textContent = '';
+        inputStatus.textContent = '字段不足：至少需要账号、密码和 2FA 密钥。';
+        return;
+      }
+      account = parts[0];
+      password = parts[1];
+      secret = parts.slice(2).join('').trim();
     }
-    decodedText = '账号：' + parts[0] + '\n密码：' + parts[1] + '\n2FA：' + parts.slice(2).join(' ');
+
+    decodedText = '账号：' + account + '\n密码：' + password + '\n2FA 密钥：' + secret;
     output.textContent = decodedText;
-    inputStatus.textContent = '整理完成 · 共识别 ' + parts.length + ' 段字段。';
+    inputStatus.textContent = '整理完成 · 已识别账号、密码和 2FA 密钥。';
   }
 
   document.getElementById('decode').addEventListener('click', decode);
