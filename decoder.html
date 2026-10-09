@@ -60,6 +60,12 @@ footer{padding:18px 0 0;color:var(--muted);font-size:12px}
       <div class="rule"><strong>Apple ID</strong><span>账号、密码、朋友、工作、父母、生日</span></div>
       <div class="rule"><strong>安全优先</strong><span>不确定格式时提示确认</span></div>
     </div>
+    <section id="mappingPanel" class="card" hidden style="margin-top:18px">
+      <strong>Apple ID 字段映射</strong>
+      <p class="hint">账号和生日会尝试自动识别。其余字段值没有固定语义，请在下方为每个值选择对应标签，再生成结果。</p>
+      <div id="mappingRows"></div>
+      <div class="actions"><button class="primary" id="applyMapping" type="button">应用字段映射</button></div>
+    </section>
     <div class="actions">
       <button class="primary" id="decode" type="button">解码并整理</button>
       <button id="clear" type="button">清空内容</button>
@@ -78,7 +84,7 @@ footer{padding:18px 0 0;color:var(--muted);font-size:12px}
     <strong>隐私提示</strong>
     <p class="hint">此页面只在浏览器本地处理文本，不含 API 请求、远程提交或自动保存逻辑。仍请谨慎处理真实密码、验证码种子或其他敏感信息，勿在公共设备上使用。</p>
   </section>
-  <footer>AWESOME RGB TOOLKIT · Decoder v0.2</footer>
+  <footer>AWESOME RGB TOOLKIT · Decoder v0.3</footer>
 </main>
 <script>
 (() => {
@@ -87,6 +93,70 @@ footer{padding:18px 0 0;color:var(--muted);font-size:12px}
   const inputStatus = document.getElementById('inputStatus');
   const copyStatus = document.getElementById('copyStatus');
   let decodedText = '';
+  let pendingAppleFields = null;
+  const appleRoles = ['密码', '朋友', '工作', '父母', '其他字段'];
+
+  function showAppleMapping(parts, accountIndex, dateIndex) {
+    const panel = document.getElementById('mappingPanel');
+    const rows = document.getElementById('mappingRows');
+    rows.textContent = '';
+    pendingAppleFields = { parts, accountIndex, dateIndex, selections: [] };
+    parts.forEach((value, index) => {
+      if (index === accountIndex || index === dateIndex) return;
+      const row = document.createElement('div');
+      row.style.cssText = 'display:grid;grid-template-columns:minmax(0,1fr) minmax(120px,.8fr);gap:12px;align-items:center;margin-top:10px';
+      const valueLabel = document.createElement('label');
+      valueLabel.style.margin = '0';
+      valueLabel.textContent = '字段值：' + value;
+      const select = document.createElement('select');
+      select.style.cssText = 'width:100%;padding:10px;border-radius:9px;background:var(--surface2);color:var(--ink);border:1px solid var(--border)';
+      appleRoles.forEach(role => {
+        const option = document.createElement('option');
+        option.value = role;
+        option.textContent = role;
+        select.appendChild(option);
+      });
+      // Initial guess only; user confirms or changes each opaque field mapping.
+      const defaultRole = index === 0 ? '账号' : index === 1 ? '密码' : '';
+      if (defaultRole && appleRoles.includes(defaultRole)) select.value = defaultRole;
+      pendingAppleFields.selections.push({ index, select });
+      row.append(valueLabel, select);
+      rows.appendChild(row);
+    });
+    panel.hidden = false;
+  }
+
+  function applyAppleMapping() {
+    if (!pendingAppleFields) return;
+    const { parts, accountIndex, dateIndex, selections } = pendingAppleFields;
+    const assigned = new Map();
+    selections.forEach(({ index, select }) => {
+      const role = select.value;
+      if (role !== '其他字段') {
+        if (assigned.has(role)) {
+          inputStatus.textContent = '字段映射有重复标签：“' + role + '”。请为每个字段选择不同标签。';
+          return;
+        }
+        assigned.set(role, parts[index]);
+      }
+    });
+    const required = ['密码', '朋友', '工作', '父母'];
+    const missing = required.filter(role => !assigned.has(role));
+    if (missing.length) {
+      inputStatus.textContent = '请完成字段映射，尚未指定：' + missing.join('、') + '。';
+      return;
+    }
+    decodedText = [
+      '账号：' + parts[accountIndex],
+      '密码：' + assigned.get('密码'),
+      '朋友：' + assigned.get('朋友'),
+      '工作：' + assigned.get('工作'),
+      '父母：' + assigned.get('父母'),
+      '生日：' + parts[dateIndex]
+    ].join('\\n');
+    output.textContent = decodedText;
+    inputStatus.textContent = '字段映射已应用。请核对结果后再复制。';
+  }
 
   function decode() {
     const raw = source.value.trim();
@@ -125,19 +195,19 @@ footer{padding:18px 0 0;color:var(--muted);font-size:12px}
       }
       lines = ['账号：' + account, '密码：' + password, '2FA 密钥：' + secret];
       format = '账号卡密';
-    } else if (parts.length >= 6 && datePattern.test(parts[parts.length - 1])) {
-      // Apple ID compact card: account, password, friend, work, parent, birth date.
-      const [account, password, friend, work, parent, ...tail] = parts;
-      const birthday = tail.join(' ');
-      lines = [
-        '账号：' + account,
-        '密码：' + password,
-        '朋友：' + friend,
-        '工作：' + work,
-        '父母：' + parent,
-        '生日：' + birthday
-      ];
-      format = 'Apple ID 卡密';
+    } else if (parts.length >= 6 && parts.filter(part => datePattern.test(part)).length === 1) {
+      const dateIndex = parts.findIndex(part => datePattern.test(part));
+      const accountIndex = parts.findIndex(part => /[^\\s@]+@[^\\s@]+\\.[^\\s@]+/u.test(part));
+      if (accountIndex < 0 || accountIndex === dateIndex || parts.length !== 6) {
+        output.textContent = '';
+        inputStatus.textContent = '检测到类似 Apple ID 卡密，但无法唯一识别账号、生日或字段数量。请调整为六个独立字段后重试。';
+        return;
+      }
+      document.getElementById('mappingPanel').hidden = true;
+      showAppleMapping(parts, accountIndex, dateIndex);
+      output.textContent = '请在“Apple ID 字段映射”中为中间字段选择正确标签。';
+      inputStatus.textContent = '已识别邮箱和生日。其余字段需要你确认，避免顺序变化导致误判。';
+      return;
     } else if (parts.length === 3) {
       // Only the unambiguous three-field compact form is treated as account/password/2FA.
       lines = ['账号：' + parts[0], '密码：' + parts[1], '2FA 密钥：' + parts[2].replace(/\s+/gu, '')];
@@ -153,9 +223,9 @@ footer{padding:18px 0 0;color:var(--muted);font-size:12px}
     inputStatus.textContent = '整理完成 · 已识别为 ' + format + '。请核对字段后再复制。';
   }
 
-  document.getElementById('decode').addEventListener('click', decode);
+  document.getElementById('decode').addEventListener('click', decode);\n  document.getElementById('applyMapping').addEventListener('click', applyAppleMapping);
   document.getElementById('clear').addEventListener('click', () => {
-    source.value = '';
+    source.value = '';\n    pendingAppleFields = null;\n    document.getElementById('mappingPanel').hidden = true;
     decodedText = '';
     output.textContent = '结果将在这里显示。';
     inputStatus.textContent = '';
