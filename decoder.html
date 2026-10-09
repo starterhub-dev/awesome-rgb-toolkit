@@ -99,12 +99,13 @@ footer{padding:18px 0 0;color:var(--muted);font-size:12px}
     }
 
     const labelled = (labels) => {
-      const pattern = new RegExp('^\\s*(?:' + labels + ')\\s*[:：]\\s*(.+?)\\s*$', 'imu');
+      // Accept both "账号：value" and "账号 value". Do not let whitespace cross line breaks.
+      const pattern = new RegExp('^[ \t]*(?:' + labels + ')[ \t]*(?:[:：][ \t]*|[ \t]+)([^\r\n]+?)[ \t]*$', 'imu');
       return raw.match(pattern);
     };
-    const accountMatch = labelled('账号|帐号|用户名|账户|Apple\\s*ID');
-    const passwordMatch = labelled('密码|口令');
-    const secretMatch = labelled('2FA(?:代码|密钥|验证码)?|二步验证(?:密钥|代码)?|验证器密钥');
+    const accountMatch = labelled('账号|帐号|帳号|帳號|用户名|账户|Apple[ \t]*ID');
+    const passwordMatch = labelled('密码|密碼|口令');
+    const secretMatch = labelled('2FA(?:[ \t]*(?:代码|密钥|验证码))?|二步验证(?:[ \t]*(?:密钥|代码|验证码))?|验证器密钥');
     const datePattern = /^\d{4}[/-]\d{1,2}[/-]\d{1,2}$/u;
     const parts = raw.split(/\s+/u).filter(Boolean);
     let lines = [];
