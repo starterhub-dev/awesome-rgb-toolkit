@@ -36,7 +36,7 @@ assert.equal(grouped.format, '空白分隔格式');
 assert.ok(grouped.text.includes('2FA代码：WZSW FSW5 JKUD LLVY'));
 assert.ok(grouped.text.includes('邮箱：person@example.com'));
 
-const labeled = parseText('账号：user@example.com\\n密码：Sample123\\n邮箱：user@example.com\\n备注：test');
+const labeled = parseText('账号：user@example.com\n密码：Sample123\n邮箱：user@example.com\n备注：test');
 assert.equal(labeled.format, '带字段标签');
 assert.ok(labeled.text.includes('账号：user@example.com'));
 assert.ok(!labeled.text.includes('备注'));
