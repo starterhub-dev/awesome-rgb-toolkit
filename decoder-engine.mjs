@@ -86,10 +86,12 @@ function parseAppleCompact(raw) {
   const parts = raw.trim().split(/\s+/u);
   if (parts.length < 6 || !DATE_RE.test(parts[5])) return null;
   if (!parts[0].includes('@')) return null;
-  return result('六字段紧凑格式', [
+  const fields = [
     ['账号', parts[0]], ['密码', parts[1]], ['朋友', parts[2]],
     ['工作', parts[3]], ['父母', parts[4]], ['生日', parts[5]],
-  ], parts.length > 6 ? ['已识别六字段前缀，额外说明文本未纳入结果。'] : []);
+  ];
+  if (parts.length > 6) fields.push(['附加字段', parts.slice(6).join(' ')]);
+  return result('六字段紧凑格式', fields, parts.length > 6 ? ['生日后的额外文本已保留为附加字段，请核对其含义。'] : []);
 }
 
 function splitDash(raw) {
@@ -117,7 +119,7 @@ function splitDash(raw) {
 
 function parseComma(raw) {
   if (!raw.includes(',')) return null;
-  const parts = raw.split(',').map(cleanValue).filter(Boolean);
+  const parts = raw.split(',').map(cleanValue);
   if (parts.length < 3) return null;
   const fields = [['账号', parts[0]], ['密码', parts[1]]];
   const mailIdx = emailIndex(parts, 2);
