@@ -104,6 +104,11 @@ function splitDash(raw) {
   if (EMAIL_RE.test(parts[2])) {
     fields.push(['邮箱', parts[2]]);
     if (parts[3] && logicalEnd > 3) fields.push(['邮箱密码', parts[3]]);
+    // Outlook/Hotmail/Live mailboxes use live.com as the login entry, matching the
+    // compact credential-card format. A trailing two-letter region code is omitted.
+    if (/(?:@)(?:outlook|hotmail|live)\\./iu.test(parts[2])) {
+      fields.push(['邮箱登录地址', 'live.com']);
+    }
   } else if (parts[3] && EMAIL_RE.test(parts[3])) {
     fields.push([looksLikeTwoFactor(parts[2]) ? '2FA代码' : '附加字段', parts[2]], ['邮箱', parts[3]]);
     if (parts[4] && logicalEnd > 4) fields.push(['邮箱密码', parts[4]]);
