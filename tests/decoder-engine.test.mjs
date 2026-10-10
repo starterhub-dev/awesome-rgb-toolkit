@@ -4,7 +4,7 @@ import { parseText } from '../decoder-engine.mjs';
 const apple = parseText('user@example.com Pwd123 friend9 work7 parent2 1995年4月17日 notes 2016/6/16');
 assert.equal(apple.format, '六字段紧凑格式');
 assert.ok(apple.text.includes('生日：1995年4月17日'));
-assert.ok(!apple.text.includes('注册时间'));
+assert.ok(apple.text.includes('附加字段：notes 2016/6/16'));
 
 const appleSlash = parseText('user@example.com Pwd123 friend9 work7 parent2 1986/9/2 notes 2015/11/5');
 assert.equal(appleSlash.format, '六字段紧凑格式');
