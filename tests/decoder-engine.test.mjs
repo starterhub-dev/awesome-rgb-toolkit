@@ -39,7 +39,12 @@ assert.ok(grouped.text.includes('邮箱：person@example.com'));
 const labeled = parseText('账号：user@example.com\n密码：Sample123\n邮箱：user@example.com\n备注：test');
 assert.equal(labeled.format, '带字段标签');
 assert.ok(labeled.text.includes('账号：user@example.com'));
-assert.ok(!labeled.text.includes('备注'));
+assert.ok(labeled.text.includes('附加字段：备注：test'));
+
+const instagram = parseText('demoUser demoPass AB12 CD34 EF56 GH78\nmail@example.test');
+assert.equal(instagram.format, '两行账号格式');
+assert.ok(instagram.text.includes('邮箱：mail@example.test'));
+assert.ok(instagram.text.includes('2FA代码：AB12 CD34 EF56 GH78'));
 
 const generic = parseText('alpha beta gamma delta');
 assert.equal(generic.ok, true);
@@ -50,4 +55,4 @@ assert.equal(simpleEmail.format, '双字段空白分隔格式');
 assert.ok(simpleEmail.text.includes('邮箱登录地址：live.com'));
 
 assert.equal(parseText('   ').ok, false);
-console.log('decoder-engine regression tests passed (11 cases)');
+console.log('decoder-engine regression tests passed (12 cases)');
