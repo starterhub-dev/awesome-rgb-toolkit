@@ -56,7 +56,7 @@ footer{padding:18px 0 0;color:var(--muted);font-size:12px}
   <header class="hero">
     <div class="eyebrow">LOCAL · PRIVATE · INSTANT</div>
     <h1>文本解码器<span style="color:var(--green)">.</span></h1>
-    <p class="subtitle">识别常见账号卡密与 Apple ID 卡密格式，并整理为清晰字段。所有解析都在当前浏览器完成，不会通过本页面上传输入内容。</p>
+    <p class="subtitle">在浏览器本地整理多种分隔符和字段标签的文本。保留原始输入，生成清晰、可复制的结构化结果。</p>
   </header>
 
   <aside class="promo" aria-label="AI 新手导航推荐">
@@ -71,11 +71,11 @@ footer{padding:18px 0 0;color:var(--muted);font-size:12px}
   <section class="card">
     <label for="source">原始文本</label>
     <textarea id="source" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="粘贴需要整理的文本…&#10;例如：字段一 字段二 字段三 字段四"></textarea>
-    <p class="hint">支持带字段标签的文本，以及按空格、换行或制表符分隔的卡密。无法可靠判断格式时会提示确认，不会擅自把所有剩余字段拼成 2FA。</p>
+    <p class="hint">支持带字段标签、日期后附注、连续横线、逗号、空格、制表符和换行分隔。未明确识别的列会按原顺序保留，不会静默丢弃。</p>
     <div class="rules">
-      <div class="rule"><strong>账号卡密</strong><span>账号、密码、2FA 密钥</span></div>
-      <div class="rule"><strong>Apple ID</strong><span>账号、密码、朋友、工作、父母、生日</span></div>
-      <div class="rule"><strong>安全优先</strong><span>不确定格式时提示确认</span></div>
+      <div class="rule"><strong>字段标签</strong><span>识别“字段名：内容”</span></div>
+      <div class="rule"><strong>多种分隔符</strong><span>横线、逗号、空格与换行</span></div>
+      <div class="rule"><strong>保留未知列</strong><span>无法确认时不擅自丢字段</span></div>
     </div>
     <div class="actions">
       <button class="primary" id="decode" type="button">解码并整理</button>
@@ -95,9 +95,11 @@ footer{padding:18px 0 0;color:var(--muted);font-size:12px}
     <strong>隐私提示</strong>
     <p class="hint">此页面只在浏览器本地处理文本，不含 API 请求、远程提交或自动保存逻辑。仍请谨慎处理真实密码、验证码种子或其他敏感信息，勿在公共设备上使用。</p>
   </section>
-  <footer>AWESOME RGB TOOLKIT · Decoder v0.2</footer>
+  <footer>AWESOME RGB TOOLKIT · Decoder v0.3</footer>
 </main>
-<script>
+<script type="module">
+import { parseText, supportedFormatSummary } from './decoder-engine.mjs';
+
 (() => {
   const source = document.getElementById('source');
   const output = document.getElementById('output');
@@ -105,75 +107,25 @@ footer{padding:18px 0 0;color:var(--muted);font-size:12px}
   const copyStatus = document.getElementById('copyStatus');
   let decodedText = '';
 
+  const hint = source.closest('.card')?.querySelector('.hint');
+  if (hint) {
+    hint.textContent = '支持格式：' + supportedFormatSummary.join('；') +
+      '。无法确认的列会保留为附加字段；所有整理均在当前浏览器完成。';
+  }
+
   function decode() {
-    const raw = source.value.trim();
     copyStatus.textContent = '';
+    const parsed = parseText(source.value);
     decodedText = '';
-    if (!raw) {
+    if (!parsed.ok) {
       output.textContent = '结果将在这里显示。';
-      inputStatus.textContent = '请先粘贴需要整理的文本。';
+      inputStatus.textContent = parsed.error || '无法识别该格式，请检查输入。';
       return;
     }
-
-    const labelled = (labels) => {
-      // Accept both "账号：value" and "账号 value". Do not let whitespace cross line breaks.
-      const pattern = new RegExp('^[ \t]*(?:' + labels + ')[ \t]*(?:[:：][ \t]*|[ \t]+)([^\r\n]+?)[ \t]*$', 'imu');
-      return raw.match(pattern);
-    };
-    const accountMatch = labelled('账号|帐号|帳号|帳號|用户名|账户|Apple[ \t]*ID');
-    const passwordMatch = labelled('密码|密碼|口令');
-    const secretMatch = labelled('2FA(?:[ \t]*(?:代码|密钥|验证码))?|二步验证(?:[ \t]*(?:密钥|代码|验证码))?|验证器密钥');
-    const datePattern = /^\d{4}[/-]\d{1,2}[/-]\d{1,2}$/u;
-    const parts = raw.split(/\s+/u).filter(Boolean);
-    let lines = [];
-    let format = '';
-
-    if (accountMatch || passwordMatch || secretMatch) {
-      const account = accountMatch?.[1].trim() || '';
-      const password = passwordMatch?.[1].trim() || '';
-      const secret = secretMatch?.[1].replace(/\s+/gu, '').trim() || '';
-      const missing = [];
-      if (!account) missing.push('账号');
-      if (!password) missing.push('密码');
-      if (!secret) missing.push('2FA 密钥');
-      if (missing.length) {
-        output.textContent = '';
-        inputStatus.textContent = '检测到带标签格式，但缺少：' + missing.join('、') + '。请检查输入，或使用 Apple ID 卡密格式。';
-        return;
-      }
-      lines = ['账号：' + account, '密码：' + password, '2FA 密钥：' + secret];
-      format = '账号卡密';
-    } else if (parts.length >= 6 && datePattern.test(parts[parts.length - 1])) {
-      // Apple ID compact card: account, password, friend, work, parent, birth date.
-      const [account, password, friend, work, parent, ...tail] = parts;
-      const birthday = tail.join(' ');
-      lines = [
-        '账号：' + account,
-        '密码：' + password,
-        '朋友：' + friend,
-        '工作：' + work,
-        '父母：' + parent,
-        '生日：' + birthday
-      ];
-      format = 'Apple ID 卡密';
-    } else if (parts.length >= 3) {
-      // Compact account cards may split a 2FA seed into groups separated by spaces.
-      // Apple ID cards with a trailing date are handled by the branch above.
-      lines = [
-        '账号：' + parts[0],
-        '密码：' + parts[1],
-        '2FA 密钥：' + parts.slice(2).join('').trim()
-      ];
-      format = parts.length === 3 ? '三字段账号卡密' : '分组式 2FA 账号卡密';
-    } else {
-      output.textContent = '';
-      inputStatus.textContent = '暂时无法可靠判断格式。请粘贴带“账号/密码/2FA 密钥”等标签的文本，或确认 Apple ID 卡密是否为“账号 密码 朋友 工作 父母 生日”六字段格式。';
-      return;
-    }
-
-    decodedText = lines.join('\n');
-    output.textContent = decodedText;
-    inputStatus.textContent = '整理完成 · 已识别为 ' + format + '。请核对字段后再复制。';
+    decodedText = parsed.text;
+    output.textContent = parsed.text;
+    const warning = parsed.warnings.length ? ' 注意：' + parsed.warnings.join(' ') : '';
+    inputStatus.textContent = '整理完成 · 识别为「' + parsed.format + '」。' + warning;
   }
 
   document.getElementById('decode').addEventListener('click', decode);
@@ -201,6 +153,9 @@ footer{padding:18px 0 0;color:var(--muted);font-size:12px}
       selection.addRange(range);
       copyStatus.textContent = '浏览器未允许自动复制，请长按选中结果后复制。';
     }
+  });
+  source.addEventListener('keydown', (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') decode();
   });
 })();
 </script>
