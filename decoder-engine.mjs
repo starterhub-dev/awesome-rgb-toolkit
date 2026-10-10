@@ -64,9 +64,9 @@ function parseLabeled(raw) {
 }
 
 function parseInstagramLayout(raw) {
-  const lines = raw.split(/\\r?\\n/u).map(line => line.trim()).filter(Boolean);
+  const lines = raw.split(/\r?\n/u).map(line => line.trim()).filter(Boolean);
   if (lines.length < 2) return null;
-  const first = lines[0].split(/\\s+/u).filter(Boolean);
+  const first = lines[0].split(/\s+/u).filter(Boolean);
   // Instagram-style card: username, password and 2FA text on line one; email on line two.
   if (first.length < 3 || EMAIL_RE.test(first[0]) || EMAIL_RE.test(first[1])) return null;
   const emailLine = lines[1];
@@ -198,6 +198,7 @@ export function parseText(input) {
 
 export const supportedFormatSummary = [
   '带字段标签的文本（例如“账号：xxx”）',
+  '账号、密码和辅助信息在首行、邮箱在第二行的两行格式',
   '固定六字段并以日期结尾的紧凑文本',
   '连续三个或更多横线分隔的文本',
   '逗号分隔文本',
