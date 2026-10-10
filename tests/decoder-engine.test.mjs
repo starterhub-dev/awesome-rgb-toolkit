@@ -31,6 +31,12 @@ assert.ok(csv.text.includes('2FA代码：T6YRFKJNETFEODQU'));
 assert.ok(csv.text.includes('Token：76a808b867d78559e831abb628ecda9dc13a703'));
 assert.ok(csv.text.includes('电话：+306934713992'));
 
+const sparseCsv = parseText('u1,p2,,mail@sample.test,extra5,tail6');
+assert.equal(sparseCsv.format, '逗号分隔格式');
+assert.ok(sparseCsv.text.includes('邮箱：mail@sample.test'));
+assert.ok(sparseCsv.text.includes('邮箱密码：extra5'));
+assert.ok(sparseCsv.text.includes('尾部字段：tail6'));
+
 const grouped = parseText('muntas.543 ARK0@TOP WZSW FSW5 JKUD LLVY person@example.com');
 assert.equal(grouped.format, '空白分隔格式');
 assert.ok(grouped.text.includes('2FA代码：WZSW FSW5 JKUD LLVY'));
@@ -55,4 +61,4 @@ assert.equal(simpleEmail.format, '双字段空白分隔格式');
 assert.ok(simpleEmail.text.includes('邮箱登录地址：live.com'));
 
 assert.equal(parseText('   ').ok, false);
-console.log('decoder-engine regression tests passed (12 cases)');
+console.log('decoder-engine regression tests passed (13 cases)');
