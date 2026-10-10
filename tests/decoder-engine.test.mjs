@@ -16,6 +16,17 @@ assert.ok(emailCombo.text.includes('邮箱：user@example.com'));
 assert.ok(emailCombo.text.includes('邮箱密码：MailPass'));
 assert.ok(emailCombo.warnings.some(x => x.includes('地区代码')));
 
+// Five-field credential-card format with mixed-length dash separators and a trailing region code.
+const cardStyle = parseText('demoUser----DemoPass!------mailbox@outlook.com----MailPass77----KR');
+assert.equal(cardStyle.format, '横线分隔格式');
+assert.ok(cardStyle.text.includes('账号：demoUser'));
+assert.ok(cardStyle.text.includes('密码：DemoPass!'));
+assert.ok(cardStyle.text.includes('邮箱：mailbox@outlook.com'));
+assert.ok(cardStyle.text.includes('邮箱密码：MailPass77'));
+assert.ok(cardStyle.text.includes('邮箱登录地址：live.com'));
+assert.ok(!cardStyle.text.includes('KR'));
+assert.ok(cardStyle.warnings.some(x => x.includes('地区代码')));
+
 const unclassified = parseText('handle----Pass!----EXTRAFIELD----user@example.com----MailPass----JP');
 assert.equal(unclassified.format, '横线分隔格式');
 assert.ok(unclassified.text.includes('附加字段：EXTRAFIELD'));
@@ -61,4 +72,4 @@ assert.equal(simpleEmail.format, '双字段空白分隔格式');
 assert.ok(simpleEmail.text.includes('邮箱登录地址：live.com'));
 
 assert.equal(parseText('   ').ok, false);
-console.log('decoder-engine regression tests passed (13 cases)');
+console.log('decoder-engine regression tests passed (14 cases)');
