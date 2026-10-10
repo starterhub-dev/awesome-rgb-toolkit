@@ -59,7 +59,26 @@ function parseLabeled(raw) {
   if (meaningful < 2 || !found.has('account') && !found.has('password') && !found.has('email')) return null;
   const order = ['account','password','email','emailPassword','twoFactor','token','friend','work','parent','birthday','phone','login'];
   const fields = order.filter(k => found.has(k)).map(k => [LABELS.find(x => x.key === k).label, found.get(k)]);
-  return result('带字段标签', fields, unmapped.length ? ['部分非字段文本未纳入结果。'] : []);
+  unmapped.forEach((line, index) => fields.push([unmapped.length === 1 ? '附加字段' : `附加字段 ${index + 1}`, line]));
+  return result('带字段标签', fields, unmapped.length ? ['未识别的行已按原文作为附加字段保留。'] : []);
+}
+
+function parseInstagramLayout(raw) {
+  const lines = raw.split(/\\r?\\n/u).map(line => line.trim()).filter(Boolean);
+  if (lines.length < 2) return null;
+  const first = lines[0].split(/\\s+/u).filter(Boolean);
+  // Instagram-style card: username, password and 2FA text on line one; email on line two.
+  if (first.length < 3 || EMAIL_RE.test(first[0]) || EMAIL_RE.test(first[1])) return null;
+  const emailLine = lines[1];
+  if (!EMAIL_RE.test(emailLine)) return null;
+  const fields = [
+    ['账号', first[0]],
+    ['密码', first[1]],
+    ['邮箱', emailLine],
+    ['2FA代码', first.slice(2).join(' ')],
+  ];
+  lines.slice(2).forEach((line, index) => fields.push([`附加字段 ${index + 1}`, line]));
+  return result('两行账号格式', fields, lines.length > 2 ? ['额外行已保留为附加字段，请核对。'] : []);
 }
 
 function parseAppleCompact(raw) {
@@ -165,7 +184,7 @@ function parseWhitespace(raw) {
 export function parseText(input) {
   const raw = String(input ?? '').replace(/\u0000/g, '').trim();
   if (!raw) return { ok: false, format: '', fields: [], text: '', warnings: [], error: '请先粘贴文本。' };
-  const parsers = [parseLabeled, parseAppleCompact, splitDash, parseComma, parseWhitespace];
+  const parsers = [parseLabeled, parseInstagramLayout, parseAppleCompact, splitDash, parseComma, parseWhitespace];
   for (const parser of parsers) {
     try {
       const parsed = parser(raw);
